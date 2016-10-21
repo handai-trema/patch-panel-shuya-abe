@@ -6,8 +6,8 @@ class PatchPanel < Trema::Controller
   }
 
   def start(_args)
-    @patch = Hash.new { [] }
-    @mirror = Hash.new { [] } 
+    @patch = Hash.new { |h,k| h[k]=[] }
+    @mirror = Hash.new { |h,k| h[k]=[] }
     logger.info 'PatchPanel started.'
   end
 
@@ -16,11 +16,15 @@ class PatchPanel < Trema::Controller
       delete_flow_entries dpid, port_a, port_b
       add_flow_entries dpid, port_a, port_b
     end
+    @mirror[dpid].each do |port_a, port_b|
+      delete_flow_entries dpid, port_a, port_b
+      add_flow_entries dpid, port_a, port_b
+    end
   end
 
   def create_patch(dpid, port_a, port_b)
     add_flow_entries dpid, port_a, port_b
-    @patch[dpid] += [port_a, port_b].sort
+    @patch[dpid] << [port_a, port_b].sort
   end
 
   def delete_patch(dpid, port_a, port_b)
@@ -31,7 +35,7 @@ class PatchPanel < Trema::Controller
   def create_mirror(dpid, monitor_port, mirror_port)
     logger.info 'create mirror'
     add_mirror_entries dpid, monitor_port, mirror_port
-    @mirror[dpid] += [monitor_port, mirror_port] #no sorting
+    @mirror[dpid] << [monitor_port, mirror_port] #no sorting
   end
 
   def show_list
@@ -58,7 +62,8 @@ class PatchPanel < Trema::Controller
 
   def add_mirror_entries(dpid, monitor_port, mirror_port)
     cnt = 0
-    @patch[dpid].each_slice(2) do |port_a, port_b|
+    puts(@patch)
+    @patch[dpid].each do |port_a, port_b|
       if port_a == monitor_port then
         send_flow_mod_add(dpid,
                           match: Match.new(in_port: port_a),
