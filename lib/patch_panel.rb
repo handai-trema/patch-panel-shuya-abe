@@ -24,18 +24,18 @@ class PatchPanel < Trema::Controller
 
   def create_patch(dpid, port_a, port_b)
     add_flow_entries dpid, port_a, port_b
-    @patch[dpid] << [port_a, port_b].sort
+    @patch[dpid].push([port_a, port_b].sort)
   end
 
   def delete_patch(dpid, port_a, port_b)
     delete_flow_entries dpid, port_a, port_b
-    @patch[dpid] -= [port_a, port_b].sort
+    @patch[dpid].delete([port_a, port_b].sort)
   end
 
   def create_mirror(dpid, monitor_port, mirror_port)
     logger.info 'create mirror'
     add_mirror_entries dpid, monitor_port, mirror_port
-    @mirror[dpid] << [monitor_port, mirror_port] #no sorting
+    @mirror[dpid].push([monitor_port, mirror_port]) #no sorting
   end
 
   def show_list
@@ -56,15 +56,14 @@ class PatchPanel < Trema::Controller
   end
 
   def delete_flow_entries(dpid, port_a, port_b)
-    send_flow_mod_delete(dpid, strict: true, priority: PRIORITY[:patch], match: Match.new(in_port: port_a))
-    send_flow_mod_delete(dpid, strict: true, priority: PRIORITY[:patch], match: Match.new(in_port: port_b))
+    send_flow_mod_delete(dpid, match: Match.new(in_port: port_a))
+    send_flow_mod_delete(dpid, match: Match.new(in_port: port_b))
   end
 
   def add_mirror_entries(dpid, monitor_port, mirror_port)
     cnt = 0
-    puts(@patch)
     @patch[dpid].each do |port_a, port_b|
-      if port_a == monitor_port then
+      if port_a == monitor_port || port_b == monitor_port then
         send_flow_mod_add(dpid,
                           match: Match.new(in_port: port_a),
                           priority: PRIORITY[:mirror],
@@ -81,6 +80,11 @@ class PatchPanel < Trema::Controller
     if cnt == 0 then
       logger.info 'cannot create mirror'
     end
+  end
+
+  def del_mirror_entries(dpid, monitor_port, mirror_port)
+    #send_flow_mod_delete(dpid, strict: true, priority: PRIORITY[:mirror], match: Match.new(in_port: monitor_port))
+    #send_flow_mod_delete(dpid, strict: true, priority: PRIORITY[:mirror], match: Match.new(out_port: monitor_port))
   end
 
   def show_patch_mirror_list
