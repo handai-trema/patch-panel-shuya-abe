@@ -30,6 +30,11 @@ class PatchPanel < Trema::Controller
   def delete_patch(dpid, port_a, port_b)
     delete_flow_entries dpid, port_a, port_b
     @patch[dpid].delete([port_a, port_b].sort)
+    @mirror[dpid].each do | mir |
+      if mir[0] == port_a || mir[0] == port_b then
+        @mirror[dpid].delete(mir)
+      end
+    end
   end
 
   def create_mirror(dpid, monitor_port, mirror_port)
@@ -87,11 +92,37 @@ class PatchPanel < Trema::Controller
   end
 
   def delete_mirror_entries(dpid, monitor_port, mirror_port)
-    send_flow_mod_delete(dpid, match: Match.new(in_port: monitor_port))
-    send_flow_mod_delete(dpid, priority: PRIORITY[:mirror], action: [SendOutPort.new(monitor_port), SendOutPort.new(mirror_port)])
+    send_flow_mod_delete(dpid, 
+                         match: Match.new(in_port: monitor_port), 
+                         out_port: mirror_port)
+    @patch[dpid].each do | pat |
+      if pat[0] == monitor_port then
+        send_flow_mod_delete(dpid, 
+                             match: Match.new(in_port: pat[1]), 
+                             out_port: mirror_port)
+        break
+      end
+    end
   end
 
   def show_patch_mirror_list
-
+    str = []
+    str.push("[patch list (port1 -- port2)]")
+    @patch.each do | p |
+      str.push("switch: 0x#{p[0].to_s(16)}")
+      p[1].each do | pat |
+        str.push(pat.join(" -- "))
+      end
+      str.push("")
+    end
+    str.push("[mirror list (monitor --> mirror)]")
+    @mirror.each do | m |
+      str.push("switch: 0x#{m[0].to_s(16)}")
+      m[1].each do | mir |
+        str.push(mir.join(" -> "))
+      end
+      str.push("")
+    end
+    return str
   end
 end
