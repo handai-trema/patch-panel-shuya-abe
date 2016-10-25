@@ -56,6 +56,22 @@ module PatchPanelApp
     end
   end
 
+  desc 'Delete a mirror'
+  arg_name 'dpid monitor_port mirror_port'
+  command :delmirror do |c|
+    c.desc 'Location to find socket files'
+    c.flag [:S, :socket_dir], default_value: Trema::DEFAULT_SOCKET_DIR
+
+    c.action do |_global_options, options, args|
+      dpid = args[0].hex
+      monitor_port = args[1].to_i
+      mirror_port = args[2].to_i
+      Trema.trema_process('PatchPanel', options[:socket_dir]).controller.
+        delete_mirror(dpid, monitor_port, mirror_port)
+    end
+  end
+
+
   desc 'Show patch list'
   arg_name ''
   command :show do |c|

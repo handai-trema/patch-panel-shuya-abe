@@ -33,9 +33,13 @@ class PatchPanel < Trema::Controller
   end
 
   def create_mirror(dpid, monitor_port, mirror_port)
-    logger.info 'create mirror'
     add_mirror_entries dpid, monitor_port, mirror_port
     @mirror[dpid].push([monitor_port, mirror_port]) #no sorting
+  end
+
+  def delete_mirror(dpid, monitor_port, mirror_port)
+    delete_mirror_entries dpid, monitor_port, mirror_port
+    @mirror[dpid].delete([monitor_port, mirror_port]) #no sorting
   end
 
   def show_list
@@ -82,9 +86,9 @@ class PatchPanel < Trema::Controller
     end
   end
 
-  def del_mirror_entries(dpid, monitor_port, mirror_port)
-    #send_flow_mod_delete(dpid, strict: true, priority: PRIORITY[:mirror], match: Match.new(in_port: monitor_port))
-    #send_flow_mod_delete(dpid, strict: true, priority: PRIORITY[:mirror], match: Match.new(out_port: monitor_port))
+  def delete_mirror_entries(dpid, monitor_port, mirror_port)
+    send_flow_mod_delete(dpid, match: Match.new(in_port: monitor_port))
+    send_flow_mod_delete(dpid, priority: PRIORITY[:mirror], action: [SendOutPort.new(monitor_port), SendOutPort.new(mirror_port)])
   end
 
   def show_patch_mirror_list
